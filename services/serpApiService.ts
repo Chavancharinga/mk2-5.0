@@ -1,6 +1,7 @@
 
 import { Business, NicheType } from '../types';
 import { config } from '../config';
+import { filterBusinessResults } from './geminiService';
 
 // Mapeamento de nicho para termos de busca
 const NICHE_TO_SEARCH_TERM: Record<string, string> = {
@@ -30,11 +31,11 @@ export const searchSerpAPI = async (
     try {
         const apiKey = config.serpApi.apiKey;
         const searchTerm = NICHE_TO_SEARCH_TERM[niche] || niche;
-        
+
         // MUDANÇA: Query mais específica incluindo a cidade explicitamente no texto de busca
         // Isso ajuda o motor do Google Maps a focar na região certa
         const query = `${searchTerm} em ${city}`;
-        
+
         // Parâmetro ll ainda ajuda a dar o contexto geográfico
         const ll = `@${lat},${lng},14z`;
 
@@ -44,11 +45,11 @@ export const searchSerpAPI = async (
         console.log(`Fallback: Searching SerpAPI via Proxy for: ${query}`);
 
         const response = await fetch(proxyUrl);
-        
+
         if (!response.ok) {
             throw new Error(`SerpAPI Proxy Error: ${response.status}`);
         }
-        
+
         const data = await response.json();
 
         if (data.error) {
@@ -73,15 +74,11 @@ export const searchSerpAPI = async (
             image: place.thumbnail
         }));
 
-        // FILTRO ESTRITO DE CIDADE
-        // Remove qualquer resultado cujo endereço não contenha o nome da cidade solicitada
-        const normalizedCity = normalizeText(city);
+        // FILTRO ESTRITO DE CIDADE E KEYWORDS (Reutilizando lógica do GeminiService)
         const originalCount = businesses.length;
-        
-        businesses = businesses.filter(b => {
-            const normalizedAddress = normalizeText(b.address);
-            return normalizedAddress.includes(normalizedCity);
-        });
+
+        // Aplica o mesmo filtro de cidade e keywords negativas que usamos no Google Places
+        businesses = filterBusinessResults(businesses, niche, city);
 
         console.log(`SerpAPI: ${originalCount} raw results -> ${businesses.length} filtered results for ${city}`);
 

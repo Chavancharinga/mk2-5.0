@@ -230,6 +230,59 @@ export const generateSalesPitch = async (businessName: string, niche: string, lo
   }
 };
 
+// Palavras-chave PROIBIDAS no nome do local (Name Filtering)
+export const NICHE_NEGATIVE_KEYWORDS: Record<string, string[]> = {
+  'Mercado': ['Feira', 'Pastelaria', 'Hotel', 'Restaurante', 'Café', 'Bar', 'Talho', 'Peixaria', 'Padaria', 'Confecções', 'Loja de', 'Clínica', 'Museu', 'Leitão', 'Worten', 'Bricomarché', 'McDonald', 'Burger', 'Chinês', 'Oriental', 'Bazar', 'Minipreço', 'Continente', 'Intermarché', 'Lidl', 'Pingo Doce'], // Adicionado grandes redes se o foco for local, ou manter se quiser tudo. O usuário reclamou de "Feira".
+  'Barbearia': ['Pet', 'Veterinário', 'Clínica', 'Estética Canina', 'Depilação', 'Unhas'],
+  'Salão de Beleza': ['Pet', 'Veterinário', 'Canino'],
+  'Academia': ['Shopping', 'Loja', 'Clínica', 'Suplementos'],
+  'Restaurante': ['Hotel', 'Motel', 'Pousada', 'Posto', 'McDonald', 'Burger King'],
+  'Oficina': ['Posto', 'Abastecimento', 'Loja de Conveniência', 'Peças'],
+};
+
+export const filterBusinessResults = (results: any[], niche: string, city: string) => {
+  const normalizedCity = normalizeText(city);
+  const negativeKeywords = NICHE_NEGATIVE_KEYWORDS[niche];
+
+  return results.filter((place: any) => {
+    let hasCity = false;
+
+    // 1. Check Address Components (Most Accurate - Google Places)
+    if (place.addressComponents) {
+      hasCity = place.addressComponents.some((component: any) => {
+        const types = component.types || [];
+        const name = normalizeText(component.longText || component.shortText || '');
+        // Check if the component is a locality (city) or administrative area (district/state) that matches the city name
+        return (types.includes('locality') || types.includes('administrative_area_level_1') || types.includes('administrative_area_level_2')) && name === normalizedCity;
+      });
+    }
+
+    // 2. Fallback: Strict String Matching (SerpAPI or missing components)
+    if (!hasCity) {
+      const address = normalizeText(place.formattedAddress || place.address || '');
+      // Regex to find the city name as a whole word, preferably after a comma or at the end
+      // Matches: ", city" or " city," or " city$" or "^city "
+      // This avoids matching "Rua de City" unless it's just "City"
+      // Also handles the case where city is part of the address string simply. 
+      // To be safe but stricter than .includes(), we ensure word boundaries.
+      const cityRegex = new RegExp(`\\b${normalizedCity}\\b`, 'i');
+      hasCity = cityRegex.test(address);
+    }
+
+    const name = place.displayName?.text || place.name || '';
+
+    // Check Negative Keywords
+    let hasNegativeKeyword = false;
+    if (negativeKeywords) {
+      hasNegativeKeyword = negativeKeywords.some(keyword =>
+        name.toLowerCase().includes(keyword.toLowerCase())
+      );
+    }
+
+    return hasCity && !hasNegativeKeyword;
+  });
+}
+
 export const searchRealBusinesses = async (
   city: string,
   district: string,
@@ -280,25 +333,31 @@ export const searchRealBusinesses = async (
       'Oficina': ['gas_station'],
     };
 
-    // Palavras-chave PROIBIDAS no nome do local (Name Filtering)
-    const NICHE_NEGATIVE_KEYWORDS: Record<string, string[]> = {
-      'Mercado': ['Feira', 'Pastelaria', 'Hotel', 'Restaurante', 'Café', 'Bar', 'Talho', 'Peixaria', 'Padaria', 'Confecções', 'Loja de', 'Clínica'],
-      'Barbearia': ['Pet', 'Veterinário', 'Clínica', 'Estética Canina'],
-      'Salão de Beleza': ['Pet', 'Veterinário', 'Canino'],
-      'Academia': ['Shopping', 'Loja', 'Clínica'],
-      'Restaurante': ['Hotel', 'Motel', 'Pousada', 'Posto'],
-      'Oficina': ['Posto', 'Abastecimento', 'Loja de Conveniência'],
+    // Mapeamento de Termos de Busca Otimizados (Query Optimization)
+    const NICHE_SEARCH_TERMS: Record<string, string> = {
+      'Mercado': 'Supermercado', // Busca mais específica que "Mercado"
+      'Barbearia': 'Barbearia',
+      'Salão de Beleza': 'Salão de Beleza',
+      'Academia': 'Academia de Ginástica',
+      'Restaurante': 'Restaurante',
+      'Oficina': 'Oficina Mecânica',
+      'Pet Shop': 'Pet Shop',
+      'Dentista': 'Clínica Dentária',
     };
+
+    // Otimização da Query: Usa o termo específico se existir, senão usa o nicho
+    const searchTerm = NICHE_SEARCH_TERMS[niche] || niche;
+    const apiQuery = `${searchTerm} em ${city}, ${district}`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.location,places.id,places.types'
+        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.location,places.id,places.types,places.addressComponents'
       },
       body: JSON.stringify({
-        textQuery: query,
+        textQuery: apiQuery,
         languageCode: 'pt-BR',
         maxResultCount: 15,
         locationBias: centerLat && centerLng ? {
@@ -323,21 +382,20 @@ export const searchRealBusinesses = async (
     }
 
     let results = data.places || [];
-    const normalizedCity = normalizeText(city);
     const allowedTypes = NICHE_ALLOWED_TYPES[niche];
     const excludedTypes = NICHE_EXCLUDED_TYPES[niche];
-    const negativeKeywords = NICHE_NEGATIVE_KEYWORDS[niche];
 
     // Filtro ESTRITO: 
     // 1. O endereço formatado DEVE conter o nome da cidade.
     // 2. Se houver tipos definidos para o nicho, o local DEVE ter pelo menos um desses tipos.
     // 3. O local NÃO pode ter nenhum dos tipos excluídos.
     // 4. O NOME do local NÃO pode conter palavras-chave proibidas.
-    const filteredResults = results.filter((place: any) => {
-      const address = normalizeText(place.formattedAddress || '');
-      const name = place.displayName?.text || '';
-      const hasCity = address.includes(normalizedCity);
 
+    // Primeiro aplica o filtro genérico (Cidade + Keywords)
+    let filteredResults = filterBusinessResults(results, niche, city);
+
+    // Depois aplica o filtro específico de TIPOS do Google Places
+    filteredResults = filteredResults.filter((place: any) => {
       let hasCorrectType = true;
       if (allowedTypes && place.types) {
         hasCorrectType = place.types.some((t: string) => allowedTypes.includes(t));
@@ -348,14 +406,7 @@ export const searchRealBusinesses = async (
         hasExcludedType = place.types.some((t: string) => excludedTypes.includes(t));
       }
 
-      let hasNegativeKeyword = false;
-      if (negativeKeywords) {
-        hasNegativeKeyword = negativeKeywords.some(keyword =>
-          name.toLowerCase().includes(keyword.toLowerCase())
-        );
-      }
-
-      return hasCity && hasCorrectType && !hasExcludedType && !hasNegativeKeyword;
+      return hasCorrectType && !hasExcludedType;
     });
 
     console.log(`Google Places: ${results.length} resultados brutos -> ${filteredResults.length} resultados filtrados para ${city}`);
