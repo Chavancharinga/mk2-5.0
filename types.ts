@@ -74,6 +74,6 @@ export const FEATURES_LIST = [
   "Mapa Interativo",
   "Depoimentos Google",
   "Blog / Notícias",
-  "Pagamento com Stripe"
+  "Pagamento com Stripe",
   "Banco de dados com Supabase",
 ];
