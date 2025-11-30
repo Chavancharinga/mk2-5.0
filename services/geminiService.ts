@@ -260,14 +260,24 @@ export const searchRealBusinesses = async (
 
     // Mapeamento de Nicho para Tipos do Google Places (Strict Filtering)
     const NICHE_ALLOWED_TYPES: Record<string, string[]> = {
-      'Mercado': ['supermarket', 'grocery_store', 'convenience_store', 'market', 'shopping_mall'],
-      'Barbearia': ['hair_salon', 'barber_shop', 'beauty_salon'],
+      'Mercado': ['supermarket', 'grocery_store'], // Removido 'convenience_store', 'market', 'shopping_mall' para evitar ruído
+      'Barbearia': ['hair_salon', 'barber_shop'],
       'Salão de Beleza': ['hair_salon', 'beauty_salon', 'spa'],
       'Academia': ['gym', 'fitness_center', 'sports_club'],
-      'Restaurante': ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
-      'Oficina': ['car_repair', 'car_dealer', 'auto_parts_store'],
+      'Restaurante': ['restaurant', 'food'],
+      'Oficina': ['car_repair', 'car_dealer'],
       'Pet Shop': ['pet_store', 'veterinary_care'],
       'Dentista': ['dentist', 'doctor', 'health'],
+    };
+
+    // Tipos explicitamente PROIBIDOS para cada nicho (Negative Filtering)
+    const NICHE_EXCLUDED_TYPES: Record<string, string[]> = {
+      'Mercado': ['lodging', 'restaurant', 'bakery', 'cafe', 'bar', 'gas_station'],
+      'Barbearia': ['pet_store', 'veterinary_care'],
+      'Salão de Beleza': ['pet_store'],
+      'Academia': ['shopping_mall'],
+      'Restaurante': ['lodging', 'gas_station'], // Evitar restaurantes de hotel ou posto se possível
+      'Oficina': ['gas_station'],
     };
 
     const response = await fetch(apiUrl, {
@@ -305,10 +315,12 @@ export const searchRealBusinesses = async (
     let results = data.places || [];
     const normalizedCity = normalizeText(city);
     const allowedTypes = NICHE_ALLOWED_TYPES[niche];
+    const excludedTypes = NICHE_EXCLUDED_TYPES[niche];
 
     // Filtro ESTRITO: 
     // 1. O endereço formatado DEVE conter o nome da cidade.
     // 2. Se houver tipos definidos para o nicho, o local DEVE ter pelo menos um desses tipos.
+    // 3. O local NÃO pode ter nenhum dos tipos excluídos.
     const filteredResults = results.filter((place: any) => {
       const address = normalizeText(place.formattedAddress || '');
       const hasCity = address.includes(normalizedCity);
@@ -318,7 +330,12 @@ export const searchRealBusinesses = async (
         hasCorrectType = place.types.some((t: string) => allowedTypes.includes(t));
       }
 
-      return hasCity && hasCorrectType;
+      let hasExcludedType = false;
+      if (excludedTypes && place.types) {
+        hasExcludedType = place.types.some((t: string) => excludedTypes.includes(t));
+      }
+
+      return hasCity && hasCorrectType && !hasExcludedType;
     });
 
     console.log(`Google Places: ${results.length} resultados brutos -> ${filteredResults.length} resultados filtrados para ${city}`);
