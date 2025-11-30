@@ -47,7 +47,7 @@ export interface WizardState {
   niche: NicheType;
   customNiche: string;
   selectedBusiness: Business | null;
-  
+
   // Custom flow
   customProjectName: string;
   customProjectDescription: string;
@@ -74,5 +74,6 @@ export const FEATURES_LIST = [
   "Mapa Interativo",
   "Depoimentos Google",
   "Blog / Notícias",
-  "Pagamento Pix"
+  "Pagamento com Stripe"
+  "Banco de dados com Supabase",
 ];
