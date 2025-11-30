@@ -258,12 +258,24 @@ export const searchRealBusinesses = async (
     // Usando textsearch que é melhor para queries "nicho em cidade"
     const apiUrl = `https://places.googleapis.com/v1/places:searchText`;
 
+    // Mapeamento de Nicho para Tipos do Google Places (Strict Filtering)
+    const NICHE_ALLOWED_TYPES: Record<string, string[]> = {
+      'Mercado': ['supermarket', 'grocery_store', 'convenience_store', 'market', 'shopping_mall'],
+      'Barbearia': ['hair_salon', 'barber_shop', 'beauty_salon'],
+      'Salão de Beleza': ['hair_salon', 'beauty_salon', 'spa'],
+      'Academia': ['gym', 'fitness_center', 'sports_club'],
+      'Restaurante': ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
+      'Oficina': ['car_repair', 'car_dealer', 'auto_parts_store'],
+      'Pet Shop': ['pet_store', 'veterinary_care'],
+      'Dentista': ['dentist', 'doctor', 'health'],
+    };
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.location,places.id'
+        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.location,places.id,places.types'
       },
       body: JSON.stringify({
         textQuery: query,
@@ -292,11 +304,21 @@ export const searchRealBusinesses = async (
 
     let results = data.places || [];
     const normalizedCity = normalizeText(city);
+    const allowedTypes = NICHE_ALLOWED_TYPES[niche];
 
-    // Filtro ESTRITO: o endereço formatado DEVE conter o nome da cidade.
+    // Filtro ESTRITO: 
+    // 1. O endereço formatado DEVE conter o nome da cidade.
+    // 2. Se houver tipos definidos para o nicho, o local DEVE ter pelo menos um desses tipos.
     const filteredResults = results.filter((place: any) => {
       const address = normalizeText(place.formattedAddress || '');
-      return address.includes(normalizedCity);
+      const hasCity = address.includes(normalizedCity);
+
+      let hasCorrectType = true;
+      if (allowedTypes && place.types) {
+        hasCorrectType = place.types.some((t: string) => allowedTypes.includes(t));
+      }
+
+      return hasCity && hasCorrectType;
     });
 
     console.log(`Google Places: ${results.length} resultados brutos -> ${filteredResults.length} resultados filtrados para ${city}`);
