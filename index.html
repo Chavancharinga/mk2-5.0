@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MK2 AI | Web Generator</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+    /* NUCLEAR OPTION: Hide ALL scrollbars everywhere */
+    html,
+    body {
+      overflow: hidden;
+      /* Stop browser body scroll */
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Hide scrollbar for Chrome/Safari/Opera */
+    ::-webkit-scrollbar {
+      display: none !important;
+      width: 0px !important;
+      height: 0px !important;
+      background: transparent !important;
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    * {
+      -ms-overflow-style: none !important;
+      /* IE and Edge */
+      scrollbar-width: none !important;
+      /* Firefox */
+    }
+
+    /* Leaflet overrides for dark mode */
+    .leaflet-container {
+      background: #050505 !important;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Remove default white squares */
+    .leaflet-bar a {
+      background-color: #111 !important;
+      color: #fff !important;
+      border-bottom: 1px solid #333 !important;
+    }
+
+    .leaflet-bar a:hover {
+      background-color: #222 !important;
+    }
+
+    /* Minimalist Tooltip */
+    .custom-map-tooltip {
+      background: rgba(0, 0, 0, 0.9) !important;
+      border: 1px solid #A020F0 !important;
+      color: #fff !important;
+      font-weight: 600 !important;
+      font-size: 12px !important;
+      padding: 4px 8px !important;
+      border-radius: 4px !important;
+      box-shadow: 0 0 10px rgba(160, 32, 240, 0.4) !important;
+      opacity: 1 !important;
+    }
+
+    /* Remove arrow from tooltip */
+    .leaflet-tooltip-top:before,
+    .leaflet-tooltip-bottom:before,
+    .leaflet-tooltip-left:before,
+    .leaflet-tooltip-right:before {
+      display: none !important;
+    }
+  </style>
+
+
+</head>
+
+<body>
+  <div id="root" class="h-full w-full"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "mk2 4.0",
+  "description": "Professional AI website generator for local businesses. Create a full-stack ready website prompt in minutes.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
