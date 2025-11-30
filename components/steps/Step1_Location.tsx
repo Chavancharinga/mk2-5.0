@@ -37,15 +37,15 @@ const COUNTRIES = [
 // Dados Mockados para Autocomplete (Focados em Portugal/Brasil para Demo)
 const DISTRICTS_DATA: Record<string, string[]> = {
   'Portugal': [
-    'Aveiro', 'Beja', 'Braga', 'Bragança', 'Castelo Branco', 'Coimbra', 'Évora', 
-    'Faro', 'Guarda', 'Leiria', 'Lisboa', 'Portalegre', 'Porto', 'Santarém', 
+    'Aveiro', 'Beja', 'Braga', 'Bragança', 'Castelo Branco', 'Coimbra', 'Évora',
+    'Faro', 'Guarda', 'Leiria', 'Lisboa', 'Portalegre', 'Porto', 'Santarém',
     'Setúbal', 'Viana do Castelo', 'Vila Real', 'Viseu', 'Açores', 'Madeira'
   ],
   'Brasil': [
-    'Acre', 'Alagoas', 'Amapá', 'Amazonas', 'Bahia', 'Ceará', 'Distrito Federal', 
-    'Espírito Santo', 'Goiás', 'Maranhão', 'Mato Grosso', 'Mato Grosso do Sul', 
-    'Minas Gerais', 'Pará', 'Paraíba', 'Paraná', 'Pernambuco', 'Piauí', 'Rio de Janeiro', 
-    'Rio Grande do Norte', 'Rio Grande do Sul', 'Rondônia', 'Roraima', 'Santa Catarina', 
+    'Acre', 'Alagoas', 'Amapá', 'Amazonas', 'Bahia', 'Ceará', 'Distrito Federal',
+    'Espírito Santo', 'Goiás', 'Maranhão', 'Mato Grosso', 'Mato Grosso do Sul',
+    'Minas Gerais', 'Pará', 'Paraíba', 'Paraná', 'Pernambuco', 'Piauí', 'Rio de Janeiro',
+    'Rio Grande do Norte', 'Rio Grande do Sul', 'Rondônia', 'Roraima', 'Santa Catarina',
     'São Paulo', 'Sergipe', 'Tocantins'
   ]
 };
@@ -57,7 +57,7 @@ const CITIES_DATA: Record<string, string[]> = {
   'Lisboa': ['Lisboa', 'Sintra', 'Cascais', 'Oeiras', 'Amadora', 'Odivelas', 'Loures', 'Mafra'],
   // Portugal - Porto
   'Porto': ['Porto', 'Vila Nova de Gaia', 'Matosinhos', 'Gondomar', 'Maia', 'Póvoa de Varzim'],
-  
+
   // Brasil - SP
   'São Paulo': ['São Paulo', 'Campinas', 'Guarulhos', 'Santos', 'São Bernardo do Campo', 'Osasco', 'Ribeirão Preto'],
   // Brasil - RJ
@@ -67,8 +67,8 @@ const CITIES_DATA: Record<string, string[]> = {
 export const Step1_Location: React.FC<Props> = ({ data, updateData, onNext }) => {
   const [isLocating, setIsLocating] = useState(false);
 
-  const isFormValid = 
-    data.location.city.length > 2 && 
+  const isFormValid =
+    data.location.city.length > 2 &&
     data.location.country.length > 2 &&
     data.location.district.length > 2 &&
     (data.niche !== NicheType.OTHER || (data.niche === NicheType.OTHER && data.customNiche.length > 2));
@@ -100,23 +100,20 @@ export const Step1_Location: React.FC<Props> = ({ data, updateData, onNext }) =>
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
-          
-          // Reverse Geocoding via Nominatim with CORS Proxy
-          const apiUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1&accept-language=pt-BR`;
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
-          
-          const response = await fetch(proxyUrl);
-          
-          if (!response.ok) throw new Error('Falha na resposta da API');
-          
-          const data = await response.json();
-          const address = data.address;
 
-          if (address) {
-            const country = address.country || '';
-            // Mapeamento flexível para Estado/Distrito dependendo do país
-            const district = address.state || address.region || address.county || '';
-            const city = address.city || address.town || address.village || address.municipality || '';
+          // Using BigDataCloud API (Free, no key required, CORS friendly)
+          const apiUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`;
+
+          const response = await fetch(apiUrl);
+
+          if (!response.ok) throw new Error('Falha na resposta da API');
+
+          const data = await response.json();
+
+          if (data) {
+            const country = data.countryName || '';
+            const district = data.principalSubdivision || '';
+            const city = data.city || data.locality || '';
 
             updateData({
               location: {
@@ -126,7 +123,7 @@ export const Step1_Location: React.FC<Props> = ({ data, updateData, onNext }) =>
               }
             });
           } else {
-             throw new Error('Endereço não encontrado');
+            throw new Error('Endereço não encontrado');
           }
         } catch (error) {
           console.error("Erro ao obter localização:", error);
@@ -148,8 +145,8 @@ export const Step1_Location: React.FC<Props> = ({ data, updateData, onNext }) =>
       <div className="space-y-2">
         <h2 className="text-3xl font-bold text-white">Onde é o seu negócio?</h2>
         <p className="text-gray-400">Precisamos da localização exata (País, Estado/Distrito e Cidade) para encontrar dados reais.</p>
-        
-        <button 
+
+        <button
           onClick={handleUseLocation}
           disabled={isLocating}
           className="flex items-center gap-2 text-[#A020F0] text-sm font-medium hover:text-[#C71585] transition-colors mt-2 focus:outline-none"
@@ -165,9 +162,9 @@ export const Step1_Location: React.FC<Props> = ({ data, updateData, onNext }) =>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Country */}
-        <NeonAutocomplete 
-          label="País" 
-          placeholder="Digite ou selecione (Ex: Portugal)" 
+        <NeonAutocomplete
+          label="País"
+          placeholder="Digite ou selecione (Ex: Portugal)"
           options={COUNTRIES}
           value={data.location.country}
           onChange={(val) => {
@@ -177,18 +174,18 @@ export const Step1_Location: React.FC<Props> = ({ data, updateData, onNext }) =>
         />
 
         {/* District (Dependent on Country) */}
-        <NeonAutocomplete 
-          label="Estado / Distrito" 
-          placeholder="Ex: Coimbra" 
+        <NeonAutocomplete
+          label="Estado / Distrito"
+          placeholder="Ex: Coimbra"
           options={availableDistricts}
           value={data.location.district}
           onChange={(val) => updateData({ location: { ...data.location, district: val } })}
         />
 
         {/* City (Dependent on District) */}
-        <NeonAutocomplete 
-          label="Cidade" 
-          placeholder="Ex: Cantanhede" 
+        <NeonAutocomplete
+          label="Cidade"
+          placeholder="Ex: Cantanhede"
           options={availableCities}
           value={data.location.city}
           onChange={(val) => updateData({ location: { ...data.location, city: val } })}
@@ -215,19 +212,19 @@ export const Step1_Location: React.FC<Props> = ({ data, updateData, onNext }) =>
             </GlowCard>
           ))}
         </div>
-        
+
         {/* Custom Niche Input - appears only when "Other" is selected */}
         <AnimatePresence>
           {data.niche === NicheType.OTHER && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, height: 0, marginTop: 0 }}
               animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
               exit={{ opacity: 0, height: 0, marginTop: 0 }}
               className="overflow-hidden"
             >
-              <NeonInput 
-                label="Qual o seu ramo de atuação?" 
-                placeholder="Ex: Shopping, Papelaria, Contabilidade..." 
+              <NeonInput
+                label="Qual o seu ramo de atuação?"
+                placeholder="Ex: Shopping, Papelaria, Contabilidade..."
                 value={data.customNiche}
                 onChange={(e) => updateData({ customNiche: e.target.value })}
                 autoFocus
@@ -238,8 +235,8 @@ export const Step1_Location: React.FC<Props> = ({ data, updateData, onNext }) =>
       </div>
 
       <div className="pt-4 flex justify-end">
-        <NeonButton 
-          onClick={onNext} 
+        <NeonButton
+          onClick={onNext}
           disabled={!isFormValid}
           className={!isFormValid ? 'opacity-50 cursor-not-allowed' : ''}
         >
