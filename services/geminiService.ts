@@ -231,18 +231,13 @@ export const generateSalesPitch = async (businessName: string, niche: string, lo
 };
 
 // Palavras-chave PROIBIDAS no nome do local (Name Filtering)
-export const NICHE_NEGATIVE_KEYWORDS: Record<string, string[]> = {
-  'Mercado': ['Feira', 'Pastelaria', 'Hotel', 'Restaurante', 'Café', 'Bar', 'Talho', 'Peixaria', 'Padaria', 'Confecções', 'Loja de', 'Clínica', 'Museu', 'Leitão', 'Worten', 'Bricomarché', 'McDonald', 'Burger', 'Chinês', 'Oriental', 'Bazar', 'Minipreço', 'Continente', 'Intermarché', 'Lidl', 'Pingo Doce'], // Adicionado grandes redes se o foco for local, ou manter se quiser tudo. O usuário reclamou de "Feira".
-  'Barbearia': ['Pet', 'Veterinário', 'Clínica', 'Estética Canina', 'Depilação', 'Unhas'],
-  'Salão de Beleza': ['Pet', 'Veterinário', 'Canino'],
-  'Academia': ['Shopping', 'Loja', 'Clínica', 'Suplementos'],
-  'Restaurante': ['Hotel', 'Motel', 'Pousada', 'Posto', 'McDonald', 'Burger King'],
-  'Oficina': ['Posto', 'Abastecimento', 'Loja de Conveniência', 'Peças'],
-};
+// REMOVIDO A PEDIDO DO USUÁRIO: O filtro por nome estava removendo resultados válidos (ex: grandes redes).
+// Agora confiamos estritamente nos TIPOS do Google Places (Allowed/Excluded Types).
+export const NICHE_NEGATIVE_KEYWORDS: Record<string, string[]> = {};
 
 export const filterBusinessResults = (results: any[], niche: string, city: string) => {
   const normalizedCity = normalizeText(city);
-  const negativeKeywords = NICHE_NEGATIVE_KEYWORDS[niche];
+  // const negativeKeywords = NICHE_NEGATIVE_KEYWORDS[niche]; // Desativado
 
   return results.filter((place: any) => {
     let hasCity = false;
@@ -269,17 +264,19 @@ export const filterBusinessResults = (results: any[], niche: string, city: strin
       hasCity = cityRegex.test(address);
     }
 
-    const name = place.displayName?.text || place.name || '';
+    // const name = place.displayName?.text || place.name || '';
 
-    // Check Negative Keywords
+    // Check Negative Keywords (DESATIVADO)
+    /*
     let hasNegativeKeyword = false;
     if (negativeKeywords) {
-      hasNegativeKeyword = negativeKeywords.some(keyword =>
+        hasNegativeKeyword = negativeKeywords.some(keyword => 
         name.toLowerCase().includes(keyword.toLowerCase())
-      );
+        );
     }
+    */
 
-    return hasCity && !hasNegativeKeyword;
+    return hasCity; // && !hasNegativeKeyword;
   });
 }
 
@@ -325,7 +322,7 @@ export const searchRealBusinesses = async (
 
     // Tipos explicitamente PROIBIDOS para cada nicho (Negative Filtering)
     const NICHE_EXCLUDED_TYPES: Record<string, string[]> = {
-      'Mercado': ['lodging', 'restaurant', 'bakery', 'cafe', 'bar', 'gas_station'],
+      'Mercado': ['lodging', 'restaurant', 'bakery', 'cafe', 'bar', 'gas_station', 'shopping_mall'], // Adicionado shopping_mall
       'Barbearia': ['pet_store', 'veterinary_care'],
       'Salão de Beleza': ['pet_store'],
       'Academia': ['shopping_mall'],
@@ -335,7 +332,7 @@ export const searchRealBusinesses = async (
 
     // Mapeamento de Termos de Busca Otimizados (Query Optimization)
     const NICHE_SEARCH_TERMS: Record<string, string> = {
-      'Mercado': 'Supermercado', // Busca mais específica que "Mercado"
+      'Mercado': 'Supermercado Mercearia', // Busca mais ampla para incluir pequenos mercados
       'Barbearia': 'Barbearia',
       'Salão de Beleza': 'Salão de Beleza',
       'Academia': 'Academia de Ginástica',
