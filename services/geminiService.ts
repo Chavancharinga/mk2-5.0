@@ -280,6 +280,16 @@ export const searchRealBusinesses = async (
       'Oficina': ['gas_station'],
     };
 
+    // Palavras-chave PROIBIDAS no nome do local (Name Filtering)
+    const NICHE_NEGATIVE_KEYWORDS: Record<string, string[]> = {
+      'Mercado': ['Feira', 'Pastelaria', 'Hotel', 'Restaurante', 'Café', 'Bar', 'Talho', 'Peixaria', 'Padaria', 'Confecções', 'Loja de', 'Clínica'],
+      'Barbearia': ['Pet', 'Veterinário', 'Clínica', 'Estética Canina'],
+      'Salão de Beleza': ['Pet', 'Veterinário', 'Canino'],
+      'Academia': ['Shopping', 'Loja', 'Clínica'],
+      'Restaurante': ['Hotel', 'Motel', 'Pousada', 'Posto'],
+      'Oficina': ['Posto', 'Abastecimento', 'Loja de Conveniência'],
+    };
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -316,13 +326,16 @@ export const searchRealBusinesses = async (
     const normalizedCity = normalizeText(city);
     const allowedTypes = NICHE_ALLOWED_TYPES[niche];
     const excludedTypes = NICHE_EXCLUDED_TYPES[niche];
+    const negativeKeywords = NICHE_NEGATIVE_KEYWORDS[niche];
 
     // Filtro ESTRITO: 
     // 1. O endereço formatado DEVE conter o nome da cidade.
     // 2. Se houver tipos definidos para o nicho, o local DEVE ter pelo menos um desses tipos.
     // 3. O local NÃO pode ter nenhum dos tipos excluídos.
+    // 4. O NOME do local NÃO pode conter palavras-chave proibidas.
     const filteredResults = results.filter((place: any) => {
       const address = normalizeText(place.formattedAddress || '');
+      const name = place.displayName?.text || '';
       const hasCity = address.includes(normalizedCity);
 
       let hasCorrectType = true;
@@ -335,7 +348,14 @@ export const searchRealBusinesses = async (
         hasExcludedType = place.types.some((t: string) => excludedTypes.includes(t));
       }
 
-      return hasCity && hasCorrectType && !hasExcludedType;
+      let hasNegativeKeyword = false;
+      if (negativeKeywords) {
+        hasNegativeKeyword = negativeKeywords.some(keyword =>
+          name.toLowerCase().includes(keyword.toLowerCase())
+        );
+      }
+
+      return hasCity && hasCorrectType && !hasExcludedType && !hasNegativeKeyword;
     });
 
     console.log(`Google Places: ${results.length} resultados brutos -> ${filteredResults.length} resultados filtrados para ${city}`);
