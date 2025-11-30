@@ -25,14 +25,14 @@ export const generateSuperPrompt = async (state: WizardState): Promise<string> =
       if (match) {
         const mimeType = match[1];
         const imageData = match[2];
-        
+
         contents.push({
           inlineData: {
             mimeType,
             data: imageData,
           }
         });
-        
+
         imagePromptPart = `
         INSTRUÇÃO CRÍTICA DE IMAGEM: O usuário forneceu uma imagem de referência.
         1. Analise a imagem em anexo para extrair sua identidade visual (design system). Extraia a paleta de cores, o estilo da tipografia (ex: serifada, sem serifa, moderna), a estrutura do layout (ex: minimalista, denso, baseado em grid) e o "mood" geral (ex: profissional, divertido, sombrio).
@@ -68,7 +68,7 @@ export const generateSuperPrompt = async (state: WizardState): Promise<string> =
     } else {
       businessName = state.selectedBusiness?.name || "Meu Negócio";
       niche = state.niche;
-      
+
       // *** NOVA LÓGICA CONDICIONAL APLICADA AQUI ***
       const hasMapFeature = state.customization.features.includes("Mapa Interativo");
 
@@ -76,10 +76,10 @@ export const generateSuperPrompt = async (state: WizardState): Promise<string> =
         // Se a funcionalidade de mapa for selecionada, injeta todos os detalhes do negócio.
         locationContext = `
         - Localização Geral: ${state.location.city}, ${state.location.district}, ${state.location.country}
-        - INFORMAÇÕES DO NEGÓCIO ESPECÍFICO (USAR PARA MAPA E SEO LOCAL):
+        - INFORMAÇÕES DO NEGÓCIO ESPECÍFICO (USAR OBRIGATORIAMENTE PARA O MAPA):
           - Nome Exato: ${state.selectedBusiness.name}
           - Endereço Completo: ${state.selectedBusiness.address}
-          - Coordenadas GPS (se disponíveis): Lat ${state.selectedBusiness.lat}, Lng ${state.selectedBusiness.lng}
+          - Coordenadas GPS: Lat ${state.selectedBusiness.lat}, Lng ${state.selectedBusiness.lng}
       `;
       } else {
         // Comportamento original: usa apenas a localização geral.
@@ -119,10 +119,10 @@ export const generateSuperPrompt = async (state: WizardState): Promise<string> =
 
       INPUT DATA:
       - Project Mode: ${state.mode}
-      ${isCustomMode ? 
-      `- Project Name: ${businessName}
+      ${isCustomMode ?
+        `- Project Name: ${businessName}
       - Project Description: ${state.customProjectDescription}` :
-      `- Business Name: ${businessName}
+        `- Business Name: ${businessName}
       - Niche: ${niche}
       - Location Details: ${locationContext}`
       }
@@ -157,6 +157,13 @@ export const generateSuperPrompt = async (state: WizardState): Promise<string> =
 
       ### Funcionalidades Ativas
       ${smartFeatures.map(f => `- [x] ${f}`).join('\n        ')}
+      
+      IMPORTANT: If "Mapa Interativo" is listed above, you MUST include the EXACT ADDRESS from "Location Details" in its description.
+      
+      CRITICAL INSTRUCTION FOR FEATURES: For EVERY feature listed above (including Stripe, Supabase, or any custom added feature), you MUST expand it with a brief technical description or benefit in parentheses.
+      Example: "- [x] Pagamento com Stripe (Secure payment processing for credit cards)"
+
+
 
       ## 4. SEO & MARKETING
       - **Keywords Foco:** [List 5 keywords relevant to the project]
@@ -209,10 +216,10 @@ export const generateSalesPitch = async (businessName: string, niche: string, lo
 
     // Limpeza rigorosa para garantir que apenas o texto da mensagem seja retornado.
     let cleanText = response.text || "Erro ao gerar pitch. Tente novamente.";
-    
+
     // Remove qualquer linha de assunto que possa vazar
     cleanText = cleanText.replace(/^(Assunto:|Subject:).*\n+/im, '');
-    
+
     // Remove placeholders comuns no final da mensagem
     cleanText = cleanText.replace(/\[.*?\]/g, '').trim();
 
@@ -224,9 +231,9 @@ export const generateSalesPitch = async (businessName: string, niche: string, lo
 };
 
 export const searchRealBusinesses = async (
-  city: string, 
-  district: string, 
-  country: string, 
+  city: string,
+  district: string,
+  country: string,
   niche: string,
   centerLat?: number,
   centerLng?: number
@@ -238,43 +245,43 @@ export const searchRealBusinesses = async (
 
   try {
     console.log(`Tentando Google Places API (Text Search) para ${niche} em ${city}...`);
-    
+
     // Correção: Obtém a chave do objeto de configuração centralizado.
     const apiKey = config.googlePlaces.apiKey;
 
     if (!apiKey) {
       throw new Error("Google Places API Key não está configurada.");
     }
-    
+
     const query = `${niche} em ${city}, ${district}`;
-    
+
     // Usando textsearch que é melhor para queries "nicho em cidade"
     const apiUrl = `https://places.googleapis.com/v1/places:searchText`;
-    
+
     const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.location,places.id'
-        },
-        body: JSON.stringify({
-            textQuery: query,
-            languageCode: 'pt-BR',
-            maxResultCount: 15,
-            locationBias: centerLat && centerLng ? {
-                circle: {
-                    center: { latitude: centerLat, longitude: centerLng },
-                    radius: 5000.0
-                }
-            } : undefined
-        })
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.location,places.id'
+      },
+      body: JSON.stringify({
+        textQuery: query,
+        languageCode: 'pt-BR',
+        maxResultCount: 15,
+        locationBias: centerLat && centerLng ? {
+          circle: {
+            center: { latitude: centerLat, longitude: centerLng },
+            radius: 5000.0
+          }
+        } : undefined
+      })
     });
-    
+
     if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Google Places Error:", errorData?.error?.message || response.status);
-        throw new Error(errorData?.error?.message || `Google API Error: ${response.status}`);
+      const errorData = await response.json();
+      console.error("Google Places Error:", errorData?.error?.message || response.status);
+      throw new Error(errorData?.error?.message || `Google API Error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -285,42 +292,42 @@ export const searchRealBusinesses = async (
 
     let results = data.places || [];
     const normalizedCity = normalizeText(city);
-    
+
     // Filtro ESTRITO: o endereço formatado DEVE conter o nome da cidade.
     const filteredResults = results.filter((place: any) => {
-        const address = normalizeText(place.formattedAddress || '');
-        return address.includes(normalizedCity);
+      const address = normalizeText(place.formattedAddress || '');
+      return address.includes(normalizedCity);
     });
 
     console.log(`Google Places: ${results.length} resultados brutos -> ${filteredResults.length} resultados filtrados para ${city}`);
 
     if (filteredResults.length > 0) {
-        return filteredResults.map((place: any, index: number) => ({
-          id: place.id,
-          name: place.displayName.text,
-          address: place.formattedAddress || 'Endereço indisponível',
-          rating: place.rating || 0,
-          reviews: place.userRatingCount || 0,
-          lat: place.location.latitude,
-          lng: place.location.longitude,
-          image: `https://picsum.photos/400/300?random=${index}`
-        }));
+      return filteredResults.map((place: any, index: number) => ({
+        id: place.id,
+        name: place.displayName.text,
+        address: place.formattedAddress || 'Endereço indisponível',
+        rating: place.rating || 0,
+        reviews: place.userRatingCount || 0,
+        lat: place.location.latitude,
+        lng: place.location.longitude,
+        image: `https://picsum.photos/400/300?random=${index}`
+      }));
     } else {
-        // Se a busca principal não retorna nada, não joga erro, apenas tenta o fallback
-        console.warn("Google Places retornou 0 resultados após filtro. Ativando Fallback...");
-        throw new Error("Zero Results after filter");
+      // Se a busca principal não retorna nada, não joga erro, apenas tenta o fallback
+      console.warn("Google Places retornou 0 resultados após filtro. Ativando Fallback...");
+      throw new Error("Zero Results after filter");
     }
 
   } catch (error) {
     console.warn("Falha na API Principal (Google Places). Ativando Fallback (SerpAPI)...", error);
-    
+
     try {
-        const serpResults = await searchSerpAPI(city, country, niche, centerLat || 0, centerLng || 0);
-        if (serpResults.length > 0) {
-            return serpResults;
-        }
+      const serpResults = await searchSerpAPI(city, country, niche, centerLat || 0, centerLng || 0);
+      if (serpResults.length > 0) {
+        return serpResults;
+      }
     } catch (serpError) {
-        console.error("Falha também no Fallback (SerpAPI):", serpError);
+      console.error("Falha também no Fallback (SerpAPI):", serpError);
     }
 
     console.warn("Todos os serviços de busca falharam. Gerando dados de demonstração.");
@@ -329,26 +336,26 @@ export const searchRealBusinesses = async (
 };
 
 function generateMockBusinesses(term: string, city: string, lat: number, lng: number): Business[] {
-    const suffixes = ['Premium', 'Express', 'VIP', 'Center', 'Local'];
-    const mocks: Business[] = [];
-    const safeLat = lat || 40.346;
-    const safeLng = lng || -8.594;
+  const suffixes = ['Premium', 'Express', 'VIP', 'Center', 'Local'];
+  const mocks: Business[] = [];
+  const safeLat = lat || 40.346;
+  const safeLng = lng || -8.594;
 
-    for (let i = 0; i < 5; i++) {
-        const latOffset = (Math.random() - 0.5) * 0.005;
-        const lngOffset = (Math.random() - 0.5) * 0.005;
+  for (let i = 0; i < 5; i++) {
+    const latOffset = (Math.random() - 0.5) * 0.005;
+    const lngOffset = (Math.random() - 0.5) * 0.005;
 
-        mocks.push({
-            id: `mock-${Date.now()}-${i}`,
-            name: `${term} ${suffixes[i % suffixes.length]}`,
-            address: `Rua do Comércio ${i * 10 + 5}, ${city}`,
-            lat: safeLat + latOffset,
-            lng: safeLng + lngOffset,
-            phone: `+351 2${Math.floor(Math.random() * 10)} ${Math.floor(Math.random() * 1000)} ${Math.floor(Math.random() * 1000)}`,
-            rating: 4.5,
-            reviews: 10 + i * 5,
-            image: `https://picsum.photos/400/300?random=${i}`
-        });
-    }
-    return mocks;
+    mocks.push({
+      id: `mock-${Date.now()}-${i}`,
+      name: `${term} ${suffixes[i % suffixes.length]}`,
+      address: `Rua do Comércio ${i * 10 + 5}, ${city}`,
+      lat: safeLat + latOffset,
+      lng: safeLng + lngOffset,
+      phone: `+351 2${Math.floor(Math.random() * 10)} ${Math.floor(Math.random() * 1000)} ${Math.floor(Math.random() * 1000)}`,
+      rating: 4.5,
+      reviews: 10 + i * 5,
+      image: `https://picsum.photos/400/300?random=${i}`
+    });
+  }
+  return mocks;
 }
