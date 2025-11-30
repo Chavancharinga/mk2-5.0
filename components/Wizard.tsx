@@ -48,37 +48,37 @@ export const Wizard: React.FC<Props> = ({ session }) => {
       setState(prev => ({ ...prev, step: prev.step + 1 }));
     }
   };
-  
+
   const prevStep = () => {
-     // A lógica de voltar do passo 3 para o 2 no modo business
+    // A lógica de voltar do passo 3 para o 2 no modo business
     if (state.step === 3 && state.mode === 'business') {
-        setState(prev => ({ ...prev, step: 2 }));
+      setState(prev => ({ ...prev, step: 2 }));
     } else {
-        setState(prev => ({ ...prev, step: Math.max(0, prev.step - 1) }));
+      setState(prev => ({ ...prev, step: Math.max(0, prev.step - 1) }));
     }
   };
-  
+
   const reset = () => setState(INITIAL_STATE);
 
   const renderStep = () => {
     switch (state.step) {
       case 0: return <Step0_ModeSelection updateData={updateData} onNext={nextStep} />;
-      case 1: 
-        return state.mode === 'business' 
-          ? <Step1_Location data={state} updateData={updateData} onNext={nextStep} /> 
-          : <StepCustom_Details data={state} updateData={updateData} onNext={nextStep} onBack={() => setState(p => ({...p, step: 0}))} />;
-      case 2: 
-        return state.mode === 'business' 
+      case 1:
+        return state.mode === 'business'
+          ? <Step1_Location data={state} updateData={updateData} onNext={nextStep} />
+          : <StepCustom_Details data={state} updateData={updateData} onNext={nextStep} onBack={() => setState(p => ({ ...p, step: 0 }))} />;
+      case 2:
+        return state.mode === 'business'
           ? <Step2_Business data={state} updateData={updateData} onNext={nextStep} onBack={prevStep} />
           : null; // Skipped in custom mode
-      case 3: 
+      case 3:
         return state.mode === 'business'
           ? <Step3_Customization data={state} updateData={updateData} onNext={nextStep} onBack={prevStep} />
           : null; // Skipped in custom mode
-      case 4: 
-        const customOnBack = () => setState(p => ({...p, step: 1}));
-        const businessOnBack = () => setState(p => ({...p, step: 3}));
-        return <Step4_Generation data={state} onReset={reset} session={session} onBack={state.mode === 'custom' ? customOnBack : businessOnBack} />;
+      case 4:
+        const customOnBack = () => setState(p => ({ ...p, step: 1 }));
+        const businessOnBack = () => setState(p => ({ ...p, step: 3 }));
+        return <Step4_Generation data={state} onReset={reset} session={session} onBack={state.mode === 'custom' ? customOnBack : businessOnBack} onUpdate={updateData} />;
       default: return null;
     }
   };
@@ -87,8 +87,8 @@ export const Wizard: React.FC<Props> = ({ session }) => {
   const progressSteps = state.mode === 'custom' ? [1, 2] : [1, 2, 3, 4];
   const currentProgressStep = state.step === 0 ? 0 :
     state.mode === 'business' ? state.step :
-    state.step === 1 ? 1 :
-    state.step === 4 ? 2 : 0;
+      state.step === 1 ? 1 :
+        state.step === 4 ? 2 : 0;
 
   return (
     <div className="max-w-4xl mx-auto w-full">
@@ -96,36 +96,36 @@ export const Wizard: React.FC<Props> = ({ session }) => {
         <div className="mb-8 flex items-center justify-between relative">
           <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-800 -z-0" />
           {progressSteps.map((s) => {
-             const isActive = s <= currentProgressStep;
-             return (
-               <motion.div 
-                 key={s}
-                 initial={false}
-                 animate={{ 
-                   backgroundColor: isActive ? '#A020F0' : '#111',
-                   borderColor: isActive ? '#A020F0' : '#333',
-                   scale: isActive ? 1.1 : 1
-                 }}
-                 className="w-8 h-8 rounded-full border-2 flex items-center justify-center z-10 relative"
-               >
-                 <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-gray-500'}`}>{s}</span>
-                 {currentProgressStep === s && (
-                   <motion.div 
-                     layoutId="step-glow"
-                     className="absolute inset-0 rounded-full bg-[#A020F0] blur-md opacity-50"
-                   />
-                 )}
-               </motion.div>
-             );
+            const isActive = s <= currentProgressStep;
+            return (
+              <motion.div
+                key={s}
+                initial={false}
+                animate={{
+                  backgroundColor: isActive ? '#A020F0' : '#111',
+                  borderColor: isActive ? '#A020F0' : '#333',
+                  scale: isActive ? 1.1 : 1
+                }}
+                className="w-8 h-8 rounded-full border-2 flex items-center justify-center z-10 relative"
+              >
+                <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-gray-500'}`}>{s}</span>
+                {currentProgressStep === s && (
+                  <motion.div
+                    layoutId="step-glow"
+                    className="absolute inset-0 rounded-full bg-[#A020F0] blur-md opacity-50"
+                  />
+                )}
+              </motion.div>
+            );
           })}
         </div>
       )}
 
       <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-10 shadow-2xl relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 pointer-events-none" 
-             style={{ backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)', backgroundSize: '40px 40px' }} 
+        <div className="absolute inset-0 opacity-10 pointer-events-none"
+          style={{ backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)', backgroundSize: '40px 40px' }}
         />
-        
+
         <AnimatePresence mode="wait">
           <motion.div
             key={`${state.mode}-${state.step}`}
